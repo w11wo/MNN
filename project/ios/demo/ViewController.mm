@@ -176,6 +176,23 @@ struct GpuCache {
 @end
 
 #pragma mark -
+@interface Wav2Vec2 : Model
+@end
+
+@implementation Wav2Vec2
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        NSString *model = [[NSBundle mainBundle] pathForResource:@"wav2vec2-bookbot-en-gruut_sim.onnx" ofType:@"mnn"];
+        _net            = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromFile(model.UTF8String));
+    }
+    return self;
+}
+
+@end
+
+#pragma mark -
 @interface MobileNetV2 : Model
 @end
 
@@ -374,6 +391,7 @@ struct GpuCache {
 
 @property (strong, nonatomic) Model *mobileNetV2;
 @property (strong, nonatomic) Model *squeezeNetV1_1;
+@property (strong, nonatomic) Model *wav2vec2;
 @property (strong, nonatomic) Model *currentModel;
 
 @property (strong, nonatomic) AVCaptureSession *session;
@@ -395,9 +413,10 @@ struct GpuCache {
 
     self.forwardType    = MNN_FORWARD_CPU;
     self.threadCount    = 4;
+    self.wav2vec2       = [Wav2Vec2 new];
     self.mobileNetV2    = [MobileNetV2 new];
     self.squeezeNetV1_1 = [SqueezeNetV1_1 new];
-    self.currentModel   = self.mobileNetV2;
+    self.currentModel   = self.wav2vec2;
 
     AVCaptureSession *session        = [[AVCaptureSession alloc] init];
     session.sessionPreset            = AVCaptureSessionPreset1280x720;
@@ -458,6 +477,14 @@ struct GpuCache {
                                                                    message:nil
                                                             preferredStyle:UIAlertControllerStyleActionSheet];
     [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Wav2Vec2"
+                                              style:UIAlertActionStyleDefault
+                                            handler:^(UIAlertAction *action) {
+                                                __strong typeof(weakify) self = weakify;
+                                                self.modelItem.title          = action.title;
+                                                self.currentModel             = self.wav2vec2;
+                                                [self refresh];
+                                            }]];
     [alert addAction:[UIAlertAction actionWithTitle:@"MobileNet V2"
                                               style:UIAlertActionStyleDefault
                                             handler:^(UIAlertAction *action) {
